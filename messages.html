@@ -139,6 +139,12 @@
       flex-shrink: 0;
     }
 
+    .conversation-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
     .conversation-info h6 {
       font-size: 13px;
       font-weight: 600;
@@ -152,6 +158,23 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+
+    .online-status {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-left: auto;
+    }
+
+    .online-status.active {
+      background: #4ade80;
+      box-shadow: 0 0 8px rgba(74, 222, 128, 0.6);
+    }
+
+    .online-status.inactive {
+      background: #6b7280;
     }
 
     .chat-area {
@@ -408,6 +431,25 @@
       font-weight: 600;
     }
 
+    .unread-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #ff4d6d, #ff758f);
+      color: #fff;
+      border-radius: 50%;
+      min-width: 24px;
+      height: 24px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-left: auto;
+      padding: 0 6px;
+    }
+
+    .unread-badge.hidden {
+      display: none;
+    }
+
     @media (max-width: 600px) {
       .phone-frame {
         border-radius: 0;
@@ -421,7 +463,24 @@
   <div class="phone-frame">
 
     <div class="messages-header">
-      <h1>💬 Messages</h1>
+      <h1 style="display: flex; align-items: center; gap: 8px;">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="32" height="32">
+          <defs>
+            <linearGradient id="hg5" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#ff4d6d;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#ff758f;stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <path d="M100,170 C30,130 10,100 10,70 C10,45 25,30 45,30 C60,30 75,40 100,60 C125,40 140,30 155,30 C175,30 190,45 190,70 C190,100 170,130 100,170 Z" fill="url(#hg5)" opacity="0.9"/>
+          <g stroke="url(#hg5)" stroke-width="2.5" fill="none" stroke-linecap="round">
+            <path d="M 50,65 Q 60,55 70,65 T 90,65" opacity="0.8"/>
+            <path d="M 40,85 Q 55,75 70,85 T 100,85 T 130,85 Q 145,75 160,85" opacity="0.8"/>
+            <path d="M 50,105 Q 65,95 80,105 T 110,105 T 140,105 Q 155,95 170,105" opacity="0.7"/>
+          </g>
+          <ellipse cx="70" cy="60" rx="12" ry="8" fill="white" opacity="0.25"/>
+        </svg>
+        Messages
+      </h1>
       <div class="header-icons">
         <button class="icon-btn" onclick="location.href='dashboard.html'" title="Back">
           <i class="bi bi-house-fill"></i>
@@ -501,10 +560,12 @@
       where,
       getDocs,
       doc,
+      getDoc,
       onSnapshot,
       setDoc,
       serverTimestamp,
-      addDoc
+      addDoc,
+      updateDoc
     } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
     import {
       getStorage,
@@ -531,13 +592,87 @@
     let currentUser = null;
     let selectedConversation = null;
     let messagesUnsubscribe = null;
+    let onlineUnsubscribes = {};  // Store unsubscribers for user status listeners
 
     const conversationsList = document.getElementById("conversationsList");
     const chatArea = document.getElementById("chatArea");
     const messagesArea = document.getElementById("messagesArea");
     const messageInput = document.getElementById("messageInput");
     const chatName = document.getElementById("chatName");
+    const chatStatus = document.getElementById("chatStatus");
     const fileInput = document.getElementById("fileInput");
+
+    // Update current user's online status
+    async function setUserOnline(userId, isOnline) {
+      try {
+        // Check if user wants to show their online status
+        const userDoc = await getDoc(doc(db, "users", userId));
+        const showOnlineStatus = userDoc.data()?.showOnlineStatus ?? true;
+        
+        // Only update status if user has enabled showing it
+        if (showOnlineStatus) {
+          await updateDoc(doc(db, "users", userId), {
+            isOnline: isOnline,
+            lastSeen: new Date()
+          });
+        }
+      } catch (err) {
+        console.error("Error updating user status:", err);
+      }
+    }
+
+    // Listen to user's online status
+    function listenToUserStatus(userId, callback) {
+      const unsubscribe = onSnapshot(doc(db, "users", userId), (doc) => {
+        if (doc.exists()) {
+          const data = doc.data();
+          callback({
+            isOnline: data.isOnline || false,
+            lastSeen: data.lastSeen?.toDate?.() || new Date()
+          });
+        }
+      });
+      return unsubscribe;
+    }
+
+    // Format last seen time
+    function formatLastSeen(lastSeenDate) {
+      if (!lastSeenDate) return "offline";
+      
+      const now = new Date();
+      const diff = Math.floor((now - lastSeenDate) / 1000); // seconds
+      
+      if (diff < 60) return "active now";
+      if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+      if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+      return lastSeenDate.toLocaleDateString();
+    }
+
+    // Get unread message count for a conversation
+    async function getUnreadCount(convId, userId) {
+      try {
+        const q = query(
+          collection(db, "conversations", convId, "messages"),
+          where("sender", "!=", userId)
+        );
+        
+        const snapshot = await getDocs(q);
+        let unreadCount = 0;
+        
+        snapshot.forEach(doc => {
+          const msg = doc.data();
+          const readBy = msg.readBy || [];
+          if (!readBy.includes(userId)) {
+            unreadCount++;
+          }
+        });
+        
+        return unreadCount;
+      } catch (err) {
+        console.error("Error getting unread count:", err);
+        return 0;
+      }
+    }
 
     // Load conversations
     async function loadConversations(userId) {
@@ -574,16 +709,65 @@
             const item = document.createElement("div");
             item.className = "conversation-item d-flex align-items-center";
             item.onclick = () => selectConversation(doc.id, userName, otherUserId);
+            item.dataset.userId = otherUserId;
 
             item.innerHTML = `
               <div class="conversation-avatar">👤</div>
               <div class="conversation-info flex-grow-1">
-                <h6>${userName}</h6>
-                <p>${conv.lastMessage || "No messages yet"}</p>
+                <div>
+                  <h6>${userName}</h6>
+                  <p>${conv.lastMessage || "No messages yet"}</p>
+                </div>
               </div>
+              <div class="unread-badge hidden" data-conv-id="${doc.id}">0</div>
+              <div class="online-status inactive" data-user-id="${otherUserId}"></div>
             `;
 
             conversationsList.appendChild(item);
+
+            // Setup unread message listener for this conversation
+            const unreadBadge = item.querySelector(`[data-conv-id="${doc.id}"]`);
+            
+            const unreadQuery = query(collection(db, "conversations", doc.id, "messages"));
+            if (onlineUnsubscribes[`unread_${doc.id}`]) {
+              onlineUnsubscribes[`unread_${doc.id}`]();
+            }
+            
+            onlineUnsubscribes[`unread_${doc.id}`] = onSnapshot(unreadQuery, (snapshot) => {
+              let unreadCount = 0;
+              snapshot.forEach(msgDoc => {
+                const msg = msgDoc.data();
+                const readBy = msg.readBy || [];
+                if (msg.sender !== userId && !readBy.includes(userId)) {
+                  unreadCount++;
+                }
+              });
+              
+              if (unreadCount > 0) {
+                unreadBadge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                unreadBadge.classList.remove("hidden");
+              } else {
+                unreadBadge.classList.add("hidden");
+              }
+            });
+
+            // Setup online status listener for this user
+            if (onlineUnsubscribes[otherUserId]) {
+              onlineUnsubscribes[otherUserId]();
+            }
+
+            onlineUnsubscribes[otherUserId] = listenToUserStatus(otherUserId, (status) => {
+              const statusEl = item.querySelector(`[data-user-id="${otherUserId}"]`);
+              if (statusEl) {
+                if (status.isOnline) {
+                  statusEl.classList.remove("inactive");
+                  statusEl.classList.add("active");
+                } else {
+                  statusEl.classList.remove("active");
+                  statusEl.classList.add("inactive");
+                }
+              }
+            });
           }
         });
       } catch (err) {
@@ -598,6 +782,24 @@
       messagesArea.innerHTML = "";
       chatArea.classList.add("active");
       conversationsList.classList.add("hidden");
+
+      // Hide unread badge for this conversation
+      const unreadBadge = document.querySelector(`[data-conv-id="${convId}"]`);
+      if (unreadBadge) {
+        unreadBadge.classList.add("hidden");
+      }
+
+      // Listen to the selected user's online status and update header
+      listenToUserStatus(userId, (status) => {
+        if (status.isOnline) {
+          chatStatus.textContent = "Active now";
+          chatStatus.style.color = "#4ade80";
+        } else {
+          chatStatus.textContent = formatLastSeen(status.lastSeen);
+          chatStatus.style.color = "#999";
+        }
+      });
+
       loadMessages(convId);
     }
 
@@ -614,6 +816,18 @@
           const messages = [];
           snapshot.forEach(doc => {
             messages.push({ id: doc.id, ...doc.data() });
+            
+            // Mark message as read if it's not from current user
+            const msg = doc.data();
+            if (msg.sender !== currentUser.uid) {
+              const readBy = msg.readBy || [];
+              if (!readBy.includes(currentUser.uid)) {
+                // Update message to mark as read
+                updateDoc(doc.ref, {
+                  readBy: [...readBy, currentUser.uid]
+                }).catch(err => console.error("Error marking message as read:", err));
+              }
+            }
           });
 
           messages.sort((a, b) => {
@@ -757,7 +971,27 @@
         window.location.href = "index.html";
       } else {
         currentUser = user;
+        setUserOnline(user.uid, true);
         loadConversations(user.uid);
+
+        // Set user as offline when they leave
+        window.addEventListener("beforeunload", () => {
+          setUserOnline(user.uid, false);
+        });
+
+        // Set user as offline after inactivity
+        let inactivityTimer;
+        const resetInactivityTimer = () => {
+          clearTimeout(inactivityTimer);
+          setUserOnline(user.uid, true);
+          inactivityTimer = setTimeout(() => {
+            setUserOnline(user.uid, false);
+          }, 5 * 60 * 1000); // 5 minutes
+        };
+
+        document.addEventListener("mousedown", resetInactivityTimer);
+        document.addEventListener("keydown", resetInactivityTimer);
+        resetInactivityTimer();
       }
     });
   </script>

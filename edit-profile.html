@@ -55,7 +55,24 @@
 
 <!-- NAVBAR -->
 <nav class="navbar navbar-dark px-3">
-  <span class="navbar-brand fw-bold">❤️ Heartwave</span>
+  <span class="navbar-brand fw-bold" style="display: flex; align-items: center; gap: 8px;">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="28" height="28">
+      <defs>
+        <linearGradient id="hg7" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#ff4d6d;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#ff758f;stop-opacity:1" />
+        </linearGradient>
+      </defs>
+      <path d="M100,170 C30,130 10,100 10,70 C10,45 25,30 45,30 C60,30 75,40 100,60 C125,40 140,30 155,30 C175,30 190,45 190,70 C190,100 170,130 100,170 Z" fill="url(#hg7)" opacity="0.9"/>
+      <g stroke="url(#hg7)" stroke-width="2.5" fill="none" stroke-linecap="round">
+        <path d="M 50,65 Q 60,55 70,65 T 90,65" opacity="0.8"/>
+        <path d="M 40,85 Q 55,75 70,85 T 100,85 T 130,85 Q 145,75 160,85" opacity="0.8"/>
+        <path d="M 50,105 Q 65,95 80,105 T 110,105 T 140,105 Q 155,95 170,105" opacity="0.7"/>
+      </g>
+      <ellipse cx="70" cy="60" rx="12" ry="8" fill="white" opacity="0.25"/>
+    </svg>
+    Heartwave
+  </span>
   <a href="dashboard.html" class="btn btn-light btn-sm">Back</a>
 </nav>
 
@@ -63,7 +80,24 @@
 <div class="container my-5">
   <div class="card edit-card">
     <div class="card-body p-4">
-      <h4 class="mb-4">✏️ Edit Profile</h4>
+      <h4 class="mb-4" style="display: flex; align-items: center; gap: 8px;">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="28" height="28">
+          <defs>
+            <linearGradient id="hg8" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#ff4d6d;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#ff758f;stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <path d="M100,170 C30,130 10,100 10,70 C10,45 25,30 45,30 C60,30 75,40 100,60 C125,40 140,30 155,30 C175,30 190,45 190,70 C190,100 170,130 100,170 Z" fill="url(#hg8)" opacity="0.9"/>
+          <g stroke="url(#hg8)" stroke-width="2.5" fill="none" stroke-linecap="round">
+            <path d="M 50,65 Q 60,55 70,65 T 90,65" opacity="0.8"/>
+            <path d="M 40,85 Q 55,75 70,85 T 100,85 T 130,85 Q 145,75 160,85" opacity="0.8"/>
+            <path d="M 50,105 Q 65,95 80,105 T 110,105 T 140,105 Q 155,95 170,105" opacity="0.7"/>
+          </g>
+          <ellipse cx="70" cy="60" rx="12" ry="8" fill="white" opacity="0.25"/>
+        </svg>
+        Edit Profile
+      </h4>
 
       <form id="profileForm">
         <div class="mb-3">
@@ -75,6 +109,32 @@
             placeholder="Enter your name"
             required
           />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Gender</label>
+          <div>
+            <div class="form-check form-check-inline">
+              <input
+                class="form-check-input"
+                type="radio"
+                name="gender"
+                id="genderMale"
+                value="Male"
+              />
+              <label class="form-check-label" for="genderMale">Male</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input
+                class="form-check-input"
+                type="radio"
+                name="gender"
+                id="genderFemale"
+                value="Female"
+              />
+              <label class="form-check-label" for="genderFemale">Female</label>
+            </div>
+          </div>
         </div>
 
         <div class="mb-3">

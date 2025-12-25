@@ -65,7 +65,7 @@ async function loadProfiles() {
     // Determine opposite gender
     const oppositeGender = userGender === "male" ? "female" : "male";
 
-    // Query profiles with opposite gender
+    // Query profiles with opposite gender and not hidden
     const q = query(
       collection(db, "users"),
       where("gender", "==", oppositeGender)
@@ -77,11 +77,14 @@ async function loadProfiles() {
     querySnapshot.forEach((doc) => {
       if (doc.id !== user.uid) {
         const profileData = doc.data();
-        console.log("Profile found:", doc.id, profileData);
-        currentProfiles.push({
-          id: doc.id,
-          ...profileData
-        });
+        // Exclude hidden profiles (profileHidden = true)
+        if (profileData.profileHidden !== true) {
+          console.log("Profile found:", doc.id, profileData);
+          currentProfiles.push({
+            id: doc.id,
+            ...profileData
+          });
+        }
       }
     });
 

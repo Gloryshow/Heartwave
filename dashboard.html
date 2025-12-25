@@ -239,6 +239,14 @@
       font-size: 18px;
     }
 
+    /* Toggle styles */
+    #notificationToggle,
+    #onlineStatusToggle,
+    #profileVisibilityToggle {
+      accent-color: #ff4d6d;
+      cursor: pointer;
+    }
+
     .bottom-nav {
       display: flex;
       justify-content: space-around;
@@ -324,7 +332,24 @@
   <div class="phone-frame">
 
     <div class="dashboard-header">
-      <h1>💖 HeartWave</h1>
+      <h1 style="display: flex; align-items: center; gap: 8px;">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="32" height="32">
+          <defs>
+            <linearGradient id="hg4" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#ff4d6d;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#ff758f;stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <path d="M100,170 C30,130 10,100 10,70 C10,45 25,30 45,30 C60,30 75,40 100,60 C125,40 140,30 155,30 C175,30 190,45 190,70 C190,100 170,130 100,170 Z" fill="url(#hg4)" opacity="0.9"/>
+          <g stroke="url(#hg4)" stroke-width="2.5" fill="none" stroke-linecap="round">
+            <path d="M 50,65 Q 60,55 70,65 T 90,65" opacity="0.8"/>
+            <path d="M 40,85 Q 55,75 70,85 T 100,85 T 130,85 Q 145,75 160,85" opacity="0.8"/>
+            <path d="M 50,105 Q 65,95 80,105 T 110,105 T 140,105 Q 155,95 170,105" opacity="0.7"/>
+          </g>
+          <ellipse cx="70" cy="60" rx="12" ry="8" fill="white" opacity="0.25"/>
+        </svg>
+        HeartWave
+      </h1>
       <div class="header-icons">
         <button class="icon-btn" onclick="location.href='edit-profile.html'" title="Edit Profile">
           <i class="bi bi-pencil"></i>
@@ -371,6 +396,15 @@
           <div class="action-card-arrow"><i class="bi bi-chevron-right"></i></div>
         </a>
 
+        <a href="likes.html" class="action-card">
+          <div class="action-card-icon">❤️</div>
+          <div class="action-card-content">
+            <h3>My Likes</h3>
+            <p>See who likes you</p>
+          </div>
+          <div class="action-card-arrow"><i class="bi bi-chevron-right"></i></div>
+        </a>
+
         <a href="messages.html" class="action-card">
           <div class="action-card-icon">💬</div>
           <div class="action-card-content">
@@ -388,6 +422,39 @@
           </div>
           <div class="action-card-arrow"><i class="bi bi-chevron-right"></i></div>
         </a>
+
+        <div class="action-card" style="cursor: auto;">
+          <div class="action-card-icon">🔔</div>
+          <div class="action-card-content">
+            <h3>Message Notifications</h3>
+            <p id="notificationStatus">Asking for permission...</p>
+          </div>
+          <div style="margin-left: auto;">
+            <input type="checkbox" id="notificationToggle" style="width: 24px; height: 24px; cursor: pointer;" />
+          </div>
+        </div>
+
+        <div class="action-card" style="cursor: auto;">
+          <div class="action-card-icon">🟢</div>
+          <div class="action-card-content">
+            <h3>Show Online Status</h3>
+            <p id="onlineStatusText">Visible to others</p>
+          </div>
+          <div style="margin-left: auto;">
+            <input type="checkbox" id="onlineStatusToggle" style="width: 24px; height: 24px; cursor: pointer;" checked />
+          </div>
+        </div>
+
+        <div class="action-card" style="cursor: auto;">
+          <div class="action-card-icon">👁️</div>
+          <div class="action-card-content">
+            <h3>Show My Profile</h3>
+            <p id="profileVisibilityText">Visible in search</p>
+          </div>
+          <div style="margin-left: auto;">
+            <input type="checkbox" id="profileVisibilityToggle" style="width: 24px; height: 24px; cursor: pointer;" checked />
+          </div>
+        </div>
       </div>
     </div>
 
@@ -422,7 +489,8 @@
       collection,
       query,
       where,
-      getDocs
+      getDocs,
+      onSnapshot
     } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
     import {
       getStorage,
@@ -470,17 +538,55 @@
           }
 
           // Load stats
-          likeCount.textContent = data.likes ? data.likes.length : 0;
+          // 1. Count how many people liked THIS user (query users collection where this user is in their likes array)
+          const likesQuery = query(collection(db, "users"), where("likes", "array-contains", user.uid));
+          const likesSnap = await getDocs(likesQuery);
+          likeCount.textContent = likesSnap.size;
           
-          // Get match count
-          const matchesQuery = query(collection(db, "matches"), where("users", "array-contains", user.uid));
-          const matchesSnap = await getDocs(matchesQuery);
-          matchCount.textContent = matchesSnap.size;
-
-          // Get message count
+          // 2. Get people messaged (count conversations)
           const convsQuery = query(collection(db, "conversations"), where("users", "array-contains", user.uid));
           const convsSnap = await getDocs(convsQuery);
-          messageCount.textContent = convsSnap.size;
+          matchCount.textContent = convsSnap.size;
+
+          // 3. Get unread message count
+          let unreadCount = 0;
+          for (const convDoc of convsSnap.docs) {
+            const messagesQuery = query(
+              collection(db, "conversations", convDoc.id, "messages")
+            );
+            const messagesSnap = await getDocs(messagesQuery);
+            
+            // Count messages NOT read by current user and not sent by current user
+            for (const msgDoc of messagesSnap.docs) {
+              const msg = msgDoc.data();
+              const readBy = msg.readBy || [];
+              if (msg.sender !== user.uid && !readBy.includes(user.uid)) {
+                unreadCount++;
+              }
+            }
+          }
+          messageCount.textContent = unreadCount;
+          
+          // Setup real-time listener for unread messages
+          const unreadListener = onSnapshot(convsQuery, async () => {
+            let realtimeUnreadCount = 0;
+            const currentConvs = await getDocs(convsQuery);
+            
+            for (const convDoc of currentConvs.docs) {
+              const messagesQuery = query(collection(db, "conversations", convDoc.id, "messages"));
+              const messagesSnap = await getDocs(messagesQuery);
+              
+              for (const msgDoc of messagesSnap.docs) {
+                const msg = msgDoc.data();
+                const readBy = msg.readBy || [];
+                if (msg.sender !== user.uid && !readBy.includes(user.uid)) {
+                  realtimeUnreadCount++;
+                }
+              }
+            }
+            
+            messageCount.textContent = realtimeUnreadCount;
+          });
         }
       } catch (err) {
         console.error("Error loading user data:", err);
@@ -518,6 +624,129 @@
       }
     });
 
+    // Notification Toggle
+    const notificationToggle = document.getElementById("notificationToggle");
+    const notificationStatus = document.getElementById("notificationStatus");
+
+    async function setupNotificationToggle(user) {
+      // Check browser support
+      if (!('Notification' in window)) {
+        notificationStatus.textContent = "Not supported";
+        notificationToggle.disabled = true;
+        return;
+      }
+
+      // Load saved preference from Firestore
+      try {
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        const notificationsEnabled = userDoc.data()?.notificationsEnabled ?? true;
+        
+        // Update UI based on current permission status
+        if (Notification.permission === 'granted') {
+          notificationToggle.checked = notificationsEnabled;
+          notificationStatus.textContent = notificationsEnabled ? "Enabled" : "Disabled";
+        } else if (Notification.permission === 'denied') {
+          notificationToggle.checked = false;
+          notificationToggle.disabled = true;
+          notificationStatus.textContent = "Blocked by browser";
+        } else {
+          notificationToggle.checked = false;
+          notificationStatus.textContent = "Click to enable";
+        }
+      } catch (err) {
+        console.error("Error loading notification preference:", err);
+      }
+
+      // Handle toggle change
+      notificationToggle.addEventListener("change", async (e) => {
+        try {
+          if (e.target.checked) {
+            // Request permission if not already granted
+            if (Notification.permission === 'default') {
+              const permission = await Notification.requestPermission();
+              if (permission === 'granted') {
+                await setDoc(doc(db, "users", user.uid), { notificationsEnabled: true }, { merge: true });
+                notificationStatus.textContent = "Enabled";
+                new Notification("💖 HeartWave", { body: "Notifications enabled! You'll be notified of new messages." });
+              } else {
+                e.target.checked = false;
+                notificationStatus.textContent = "Permission denied";
+              }
+            } else if (Notification.permission === 'granted') {
+              await setDoc(doc(db, "users", user.uid), { notificationsEnabled: true }, { merge: true });
+              notificationStatus.textContent = "Enabled";
+            }
+          } else {
+            // Disable notifications
+            await setDoc(doc(db, "users", user.uid), { notificationsEnabled: false }, { merge: true });
+            notificationStatus.textContent = "Disabled";
+          }
+        } catch (err) {
+          console.error("Error updating notification preference:", err);
+          alert("Error updating notification preference");
+        }
+      });
+    }
+
+    // Online Status Toggle
+    const onlineStatusToggle = document.getElementById("onlineStatusToggle");
+    const onlineStatusText = document.getElementById("onlineStatusText");
+
+    async function setupOnlineStatusToggle(user) {
+      try {
+        // Load saved preference from Firestore
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        const showOnlineStatus = userDoc.data()?.showOnlineStatus ?? true;
+        
+        onlineStatusToggle.checked = showOnlineStatus;
+        onlineStatusText.textContent = showOnlineStatus ? "Visible to others" : "Hidden from others";
+      } catch (err) {
+        console.error("Error loading online status preference:", err);
+      }
+
+      // Handle toggle change
+      onlineStatusToggle.addEventListener("change", async (e) => {
+        try {
+          const isVisible = e.target.checked;
+          await setDoc(doc(db, "users", user.uid), { showOnlineStatus: isVisible }, { merge: true });
+          onlineStatusText.textContent = isVisible ? "Visible to others" : "Hidden from others";
+        } catch (err) {
+          console.error("Error updating online status preference:", err);
+          alert("Error updating online status preference");
+        }
+      });
+    }
+
+    // Profile Visibility Toggle
+    const profileVisibilityToggle = document.getElementById("profileVisibilityToggle");
+    const profileVisibilityText = document.getElementById("profileVisibilityText");
+
+    async function setupProfileVisibilityToggle(user) {
+      try {
+        // Load saved preference from Firestore
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        const profileHidden = userDoc.data()?.profileHidden ?? false;  // Visible by default
+        
+        // Toggle is ON when profile is VISIBLE (profileHidden = false)
+        profileVisibilityToggle.checked = !profileHidden;
+        profileVisibilityText.textContent = profileHidden ? "Hidden from search" : "Visible in search";
+      } catch (err) {
+        console.error("Error loading profile visibility preference:", err);
+      }
+
+      // Handle toggle change
+      profileVisibilityToggle.addEventListener("change", async (e) => {
+        try {
+          const isVisible = e.target.checked;
+          await setDoc(doc(db, "users", user.uid), { profileHidden: !isVisible }, { merge: true });
+          profileVisibilityText.textContent = isVisible ? "Visible in search" : "Hidden from search";
+        } catch (err) {
+          console.error("Error updating profile visibility:", err);
+          alert("Error updating profile visibility");
+        }
+      });
+    }
+
     // Logout
     window.logout = async () => {
       try {
@@ -534,6 +763,9 @@
         window.location.href = "index.html";
       } else {
         loadUserData(user);
+        setupNotificationToggle(user);
+        setupOnlineStatusToggle(user);
+        setupProfileVisibilityToggle(user);
       }
     });
   </script>

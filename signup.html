@@ -185,6 +185,38 @@
       color: #ff4d6d;
     }
 
+    /* Password toggle styles */
+    .password-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .password-wrapper input {
+      width: 100%;
+      padding-right: 40px;
+    }
+
+    .password-toggle-btn {
+      position: absolute;
+      right: 12px;
+      background: none;
+      border: none;
+      color: #ff758f;
+      cursor: pointer;
+      font-size: 18px;
+      padding: 0;
+      transition: color 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .password-toggle-btn:hover {
+      color: #ff4d6d;
+    }
+
     .password-strength {
       height: 4px;
       background: rgba(255, 77, 109, 0.2);
@@ -219,7 +251,17 @@
   <div class="auth-container">
     <div class="auth-card">
       <div class="auth-header">
-        <div class="logo">💖</div>
+        <div class="logo" style="width: 60px; height: 60px; margin: 0 auto 12px;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+            <defs>
+              <linearGradient id="hg2" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#ff4d6d;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#ff758f;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+            <path d="M100,180 C30,140 10,110 10,70 C10,45 25,30 45,30 C60,30 75,42 100,65 C125,42 140,30 155,30 C175,30 190,45 190,70 C190,110 170,140 100,180 Z" fill="url(#hg2)" />
+          </svg>
+        </div>
         <h1>Join HeartWave</h1>
         <p>Find your perfect match today</p>
       </div>
@@ -239,12 +281,17 @@
 
         <div class="form-group">
           <label for="signupPassword">Password</label>
-          <input 
-            type="password" 
-            id="signupPassword" 
-            placeholder="••••••••" 
-            required 
-          />
+          <div class="password-wrapper">
+            <input 
+              type="password" 
+              id="signupPassword" 
+              placeholder="••••••••" 
+              required 
+            />
+            <button type="button" class="password-toggle-btn" id="signupToggle" title="Show/Hide Password">
+              <i class="bi bi-eye"></i>
+            </button>
+          </div>
           <div class="password-strength">
             <div class="password-strength-bar" id="strengthBar"></div>
           </div>
@@ -283,12 +330,46 @@
 
         <div class="form-group">
           <label for="signupLocation">Location</label>
-          <input 
-            type="text" 
-            id="signupLocation" 
-            placeholder="City, Country" 
-            required 
-          />
+          <select id="signupLocation" required>
+            <option value="">Select Your State</option>
+            <option value="Abia">Abia</option>
+            <option value="Adamawa">Adamawa</option>
+            <option value="Akwa Ibom">Akwa Ibom</option>
+            <option value="Anambra">Anambra</option>
+            <option value="Bauchi">Bauchi</option>
+            <option value="Bayelsa">Bayelsa</option>
+            <option value="Benue">Benue</option>
+            <option value="Borno">Borno</option>
+            <option value="Cross River">Cross River</option>
+            <option value="Delta">Delta</option>
+            <option value="Ebonyi">Ebonyi</option>
+            <option value="Edo">Edo</option>
+            <option value="Ekiti">Ekiti</option>
+            <option value="Enugu">Enugu</option>
+            <option value="Gombe">Gombe</option>
+            <option value="Imo">Imo</option>
+            <option value="Jigawa">Jigawa</option>
+            <option value="Kaduna">Kaduna</option>
+            <option value="Kano">Kano</option>
+            <option value="Katsina">Katsina</option>
+            <option value="Kebbi">Kebbi</option>
+            <option value="Kogi">Kogi</option>
+            <option value="Kwara">Kwara</option>
+            <option value="Lagos">Lagos</option>
+            <option value="Nasarawa">Nasarawa</option>
+            <option value="Niger">Niger</option>
+            <option value="Ogun">Ogun</option>
+            <option value="Ondo">Ondo</option>
+            <option value="Osun">Osun</option>
+            <option value="Oyo">Oyo</option>
+            <option value="Plateau">Plateau</option>
+            <option value="Rivers">Rivers</option>
+            <option value="Sokoto">Sokoto</option>
+            <option value="Taraba">Taraba</option>
+            <option value="Yobe">Yobe</option>
+            <option value="Zamfara">Zamfara</option>
+            <option value="FCT">Federal Capital Territory (FCT)</option>
+          </select>
         </div>
 
         <div class="form-group">
@@ -322,13 +403,33 @@
 
   <script type="module" src="auth.js"></script>
   <script>
-    // Password strength indicator
-    const passwordInput = document.getElementById('signupPassword');
+    // Password visibility toggle for signup
+    const signupToggle = document.getElementById('signupToggle');
+    const signupPassword = document.getElementById('signupPassword');
     const strengthBar = document.getElementById('strengthBar');
 
-    if (passwordInput) {
-      passwordInput.addEventListener('input', () => {
-        const password = passwordInput.value;
+    if (signupToggle && signupPassword) {
+      signupToggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        const isPassword = signupPassword.type === 'password';
+        signupPassword.type = isPassword ? 'text' : 'password';
+        
+        // Update icon
+        const icon = signupToggle.querySelector('i');
+        if (isPassword) {
+          icon.classList.remove('bi-eye');
+          icon.classList.add('bi-eye-slash');
+        } else {
+          icon.classList.remove('bi-eye-slash');
+          icon.classList.add('bi-eye');
+        }
+      });
+    }
+
+    // Password strength indicator
+    if (signupPassword && strengthBar) {
+      signupPassword.addEventListener('input', () => {
+        const password = signupPassword.value;
         let strength = 0;
         
         if (password.length >= 6) strength += 25;

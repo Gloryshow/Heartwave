@@ -52,6 +52,54 @@ const attachBtn = document.getElementById("attachBtn");
 let currentUser = null;
 let currentConversationId = null;
 let messageUnsubscribe = null;
+let notificationsEnabled = false;
+
+// Request notification permission on page load
+async function requestNotificationPermission() {
+  if (!('Notification' in window)) {
+    console.log("This browser does not support notifications");
+    return;
+  }
+
+  if (Notification.permission === 'granted') {
+    notificationsEnabled = true;
+  } else if (Notification.permission !== 'denied') {
+    try {
+      const permission = await Notification.requestPermission();
+      notificationsEnabled = permission === 'granted';
+    } catch (err) {
+      console.error("Error requesting notification permission:", err);
+    }
+  }
+}
+
+// Show notification for new message
+async function showMessageNotification(senderName, messagePreview, userId) {
+  if (!notificationsEnabled || !('Notification' in window)) return;
+
+  // Check if notifications are enabled in Firestore
+  try {
+    const userDoc = await getDoc(doc(db, "users", userId));
+    const userPreferences = userDoc.data();
+    if (!userPreferences?.notificationsEnabled) {
+      return; // User has disabled notifications
+    }
+  } catch (err) {
+    console.error("Error checking notification preference:", err);
+    return;
+  }
+
+  try {
+    new Notification("💖 HeartWave Message", {
+      body: `${senderName}: ${messagePreview}`,
+      icon: "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext x=%2250%22 y=%2250%22 text-anchor=%22middle%22 dy=%22.3em%22 font-size=%2280%22%3E💖%3C/text%3E%3C/svg%3E",
+      tag: "heartwave-message",
+      requireInteraction: false
+    });
+  } catch (err) {
+    console.error("Error showing notification:", err);
+  }
+}
 
 // Load conversations
 async function loadConversations() {
@@ -134,9 +182,18 @@ window.selectConversation = function(conversationId, userName) {
 
   messageUnsubscribe = onSnapshot(q, (querySnapshot) => {
     messagesContainer.innerHTML = "";
-    querySnapshot.forEach((doc) => {
+    let lastMessageSender = null;
+    let lastMessageText = "";
+
+    querySnapshot.forEach((doc, index) => {
       const msg = doc.data();
       const isOwn = msg.sender === currentUser.uid;
+
+      // Track last message info for notification
+      if (index === querySnapshot.size - 1 && !isOwn) {
+        lastMessageSender = msg.sender;
+        lastMessageText = msg.text || (msg.type === "image" ? "📷 Image" : msg.type === "audio" ? "🎵 Audio" : msg.type === "video" ? "🎬 Video" : "Message");
+      }
 
       const msgEl = document.createElement("div");
       msgEl.className = `message ${isOwn ? "own" : "other"}`;
@@ -172,11 +229,44 @@ window.selectConversation = function(conversationId, userName) {
       `;
 
       messagesContainer.appendChild(msgEl);
+
+      // Mark message as read if it's not from current user
+      if (!isOwn && (!msg.readBy || !msg.readBy.includes(currentUser.uid))) {
+        markMessageAsRead(currentConversationId, doc.id);
+      }
     });
+
+    // Show notification for new incoming message
+    if (lastMessageSender && lastMessageSender !== currentUser.uid) {
+      (async () => {
+        const senderDoc = await getDoc(doc(db, "users", lastMessageSender));
+        const senderName = senderDoc.data()?.fullName || "Someone";
+        showMessageNotification(senderName, lastMessageText.substring(0, 50), currentUser.uid);
+      })();
+    }
 
     // Scroll to bottom
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
   });
+};
+
+// Mark message as read
+async function markMessageAsRead(conversationId, messageId) {
+  try {
+    const msgRef = doc(db, "conversations", conversationId, "messages", messageId);
+    const msgDoc = await getDoc(msgRef);
+    if (msgDoc.exists()) {
+      const msg = msgDoc.data();
+      const readBy = msg.readBy || [];
+      if (!readBy.includes(currentUser.uid)) {
+        readBy.push(currentUser.uid);
+        await setDoc(msgRef, { readBy }, { merge: true });
+      }
+    }
+  } catch (err) {
+    console.error("Error marking message as read:", err);
+  }
+
 };
 
 // Send message
@@ -189,7 +279,8 @@ sendBtn.addEventListener("click", async () => {
       text,
       sender: currentUser.uid,
       type: "text",
-      timestamp: new Date()
+      timestamp: new Date(),
+      readBy: [currentUser.uid]  // Message read by sender immediately
     });
 
     // Update last message in conversation
@@ -242,7 +333,8 @@ fileInput.addEventListener("change", async (e) => {
       type: fileType,
       mediaUrl,
       sender: currentUser.uid,
-      timestamp: new Date()
+      timestamp: new Date(),
+      readBy: [currentUser.uid]  // Message read by sender immediately
     });
 
     // Update last message
@@ -278,6 +370,10 @@ onAuthStateChanged(auth, async (user) => {
     window.location.href = "index.html";
   } else {
     currentUser = user;
+    
+    // Request notification permission on page load
+    await requestNotificationPermission();
+    
     await loadConversations();
 
     // Check if a conversation was selected

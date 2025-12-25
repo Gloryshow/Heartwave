@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="heartWaveGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff4d6d;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ff758f;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle (optional, for icon apps) -->
+  <circle cx="100" cy="100" r="95" fill="none" stroke="url(#heartWaveGradient)" stroke-width="2" opacity="0.2"/>
+  
+  <!-- Heart shape -->
+  <path d="M100,170 C30,130 10,100 10,70 C10,45 25,30 45,30 C60,30 75,40 100,60 C125,40 140,30 155,30 C175,30 190,45 190,70 C190,100 170,130 100,170 Z" 
+        fill="url(#heartWaveGradient)" 
+        opacity="0.9"/>
+  
+  <!-- Wave lines inside heart -->
+  <g stroke="url(#heartWaveGradient)" stroke-width="2.5" fill="none" stroke-linecap="round">
+    <!-- Top wave -->
+    <path d="M 50,65 Q 60,55 70,65 T 90,65" opacity="0.8"/>
+    <!-- Middle wave -->
+    <path d="M 40,85 Q 55,75 70,85 T 100,85 T 130,85 Q 145,75 160,85" opacity="0.8"/>
+    <!-- Bottom wave -->
+    <path d="M 50,105 Q 65,95 80,105 T 110,105 T 140,105 Q 155,95 170,105" opacity="0.7"/>
+  </g>
+  
+  <!-- Highlight/shine effect -->
+  <ellipse cx="70" cy="60" rx="12" ry="8" fill="white" opacity="0.25"/>
+</svg>

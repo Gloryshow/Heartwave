@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HeartWave - Likes</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+      min-height: 100vh;
+      color: #fff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .phone-frame {
+      max-width: 500px;
+      margin: 20px auto;
+      background: #0a0a0a;
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      height: 90vh;
+      max-height: 800px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .likes-header {
+      padding: 16px;
+      background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+      border-bottom: 1px solid rgba(255, 77, 109, 0.2);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .likes-header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #ff4d6d, #ff758f);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header-icons {
+      display: flex;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(255, 77, 109, 0.1);
+      border: 1px solid rgba(255, 77, 109, 0.3);
+      color: #ff758f;
+      font-size: 18px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .icon-btn:hover {
+      background: rgba(255, 77, 109, 0.2);
+      border-color: rgba(255, 77, 109, 0.5);
+      transform: scale(1.1);
+    }
+
+    .likes-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+    }
+
+    .likes-content::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .likes-content::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .likes-content::-webkit-scrollbar-thumb {
+      background: rgba(255, 77, 109, 0.3);
+      border-radius: 2px;
+    }
+
+    .like-card {
+      background: rgba(26, 26, 46, 0.8);
+      border: 1px solid rgba(255, 77, 109, 0.2);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 12px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .like-card:hover {
+      background: rgba(26, 26, 46, 1);
+      border-color: rgba(255, 77, 109, 0.5);
+      transform: translateY(-2px);
+    }
+
+    .like-avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ff4d6d, #ff758f);
+      flex-shrink: 0;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+    }
+
+    .like-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .like-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .like-name {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .like-details {
+      font-size: 13px;
+      color: #999;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .like-details span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .like-actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .action-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 77, 109, 0.3);
+      background: rgba(255, 77, 109, 0.1);
+      color: #ff758f;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .action-btn:hover {
+      background: rgba(255, 77, 109, 0.2);
+      border-color: rgba(255, 77, 109, 0.5);
+    }
+
+    .action-btn.liked {
+      background: rgba(255, 77, 109, 0.2);
+      color: #ff4d6d;
+      border-color: rgba(255, 77, 109, 0.5);
+    }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+      color: #666;
+    }
+
+    .empty-state i {
+      font-size: 64px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .empty-state h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #ccc;
+    }
+
+    .empty-state p {
+      font-size: 14px;
+      color: #666;
+      max-width: 200px;
+    }
+
+    .bottom-nav {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 12px 0;
+      background: linear-gradient(135deg, rgba(0, 0, 0, 0.5) 0%, rgba(26, 26, 46, 0.5) 100%);
+      border-top: 1px solid rgba(255, 77, 109, 0.2);
+      margin-top: 0;
+      backdrop-filter: blur(10px);
+    }
+
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      text-decoration: none;
+      color: #666;
+      transition: all 0.3s ease;
+      padding: 8px;
+    }
+
+    .nav-item:hover, .nav-item.active {
+      color: #ff758f;
+    }
+
+    .nav-item i {
+      font-size: 20px;
+    }
+
+    .nav-item span {
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    @media (max-width: 600px) {
+      .phone-frame {
+        border-radius: 0;
+        margin: 0;
+        border: none;
+        max-height: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="phone-frame">
+    <div class="likes-header">
+      <h1>
+        <i class="bi bi-heart-fill"></i>
+        Likes
+      </h1>
+      <div class="header-icons">
+        <button class="icon-btn" onclick="location.href='dashboard.html'" title="Back">
+          <i class="bi bi-house-fill"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="likes-content">
+      <div id="likesList"></div>
+    </div>
+
+    <div class="bottom-nav">
+      <a href="dashboard.html" class="nav-item">
+        <i class="bi bi-heart-fill"></i>
+        <span>Home</span>
+      </a>
+      <a href="matches.html" class="nav-item">
+        <i class="bi bi-fire"></i>
+        <span>Matches</span>
+      </a>
+      <a href="messages.html" class="nav-item">
+        <i class="bi bi-chat-left-dots-fill"></i>
+        <span>Messages</span>
+      </a>
+      <a href="likes.html" class="nav-item active">
+        <i class="bi bi-heart"></i>
+        <span>Likes</span>
+      </a>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import {
+      getAuth,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+    import {
+      getFirestore,
+      collection,
+      query,
+      where,
+      getDocs,
+      doc,
+      getDoc,
+      updateDoc
+    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC21Bg3pgOsoV7uHExVVuEwOaQA5zC1X80",
+      authDomain: "heartwave-86494.firebaseapp.com",
+      projectId: "heartwave-86494",
+      storageBucket: "heartwave-86494.firebasestorage.app",
+      messagingSenderId: "614851991644",
+      appId: "1:614851991644:web:bdefba8600e13ed0c62e99",
+      measurementId: "G-ESQ0RLFFFD"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUser = null;
+    const likesList = document.getElementById("likesList");
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "index.html";
+      } else {
+        currentUser = user;
+        await loadLikes();
+      }
+    });
+
+    async function loadLikes() {
+      try {
+        // Query all users who have current user in their likes array
+        const q = query(
+          collection(db, "users"),
+          where("likes", "array-contains", currentUser.uid)
+        );
+
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+          likesList.innerHTML = `
+            <div class="empty-state">
+              <i class="bi bi-heart"></i>
+              <h3>No Likes Yet</h3>
+              <p>Keep swiping to get more likes!</p>
+            </div>
+          `;
+          return;
+        }
+
+        likesList.innerHTML = "";
+
+        for (const userDoc of querySnapshot.docs) {
+          const user = userDoc.data();
+          const userId = userDoc.id;
+
+          // Get current user's likes to check if they liked back
+          const currentUserDoc = await getDoc(doc(db, "users", currentUser.uid));
+          const currentUserLikes = currentUserDoc.data()?.likes || [];
+          const hasLikedBack = currentUserLikes.includes(userId);
+
+          const likeCard = document.createElement("div");
+          likeCard.className = "like-card";
+          likeCard.innerHTML = `
+            <div class="like-avatar">
+              ${user.profilePicture ? 
+                `<img src="${user.profilePicture}" alt="${user.fullName}">` :
+                `<i class="bi bi-person-fill"></i>`
+              }
+            </div>
+            <div class="like-info">
+              <div class="like-name">${user.fullName || "User"}</div>
+              <div class="like-details">
+                <span>
+                  <i class="bi bi-gender-female"></i>
+                  ${user.gender || "Unknown"}
+                </span>
+                <span>
+                  <i class="bi bi-calendar"></i>
+                  ${user.age || "?"}
+                </span>
+                ${user.location ? `
+                  <span>
+                    <i class="bi bi-geo-alt"></i>
+                    ${user.location}
+                  </span>
+                ` : ""}
+              </div>
+            </div>
+            <div class="like-actions">
+              <button class="action-btn ${hasLikedBack ? 'liked' : ''}" 
+                      onclick="toggleLike('${userId}', this)" 
+                      title="${hasLikedBack ? 'Unlike' : 'Like'}">
+                <i class="bi ${hasLikedBack ? 'bi-heart-fill' : 'bi-heart'}"></i>
+              </button>
+              <button class="action-btn" 
+                      onclick="location.href='messages.html?userId=${userId}'"
+                      title="Message">
+                <i class="bi bi-chat-dots"></i>
+              </button>
+            </div>
+          `;
+
+          likesList.appendChild(likeCard);
+        }
+      } catch (err) {
+        console.error("Error loading likes:", err);
+        likesList.innerHTML = `
+          <div class="empty-state">
+            <i class="bi bi-exclamation-circle"></i>
+            <h3>Error</h3>
+            <p>${err.message}</p>
+          </div>
+        `;
+      }
+    }
+
+    window.toggleLike = async function(userId, button) {
+      try {
+        const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+        const userLikes = userDoc.data()?.likes || [];
+
+        if (userLikes.includes(userId)) {
+          // Unlike
+          const updatedLikes = userLikes.filter(id => id !== userId);
+          await updateDoc(doc(db, "users", currentUser.uid), {
+            likes: updatedLikes
+          });
+          button.classList.remove("liked");
+          button.innerHTML = '<i class="bi bi-heart"></i>';
+          button.title = "Like";
+        } else {
+          // Like
+          const updatedLikes = [...userLikes, userId];
+          await updateDoc(doc(db, "users", currentUser.uid), {
+            likes: updatedLikes
+          });
+          button.classList.add("liked");
+          button.innerHTML = '<i class="bi bi-heart-fill"></i>';
+          button.title = "Unlike";
+        }
+      } catch (err) {
+        console.error("Error toggling like:", err);
+        alert("Error updating like: " + err.message);
+      }
+    };
+  </script>
+</body>
+</html>

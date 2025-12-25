@@ -61,6 +61,9 @@ onAuthStateChanged(auth, async (user) => {
         document.getElementById("bio").value = data.bio || "";
         document.getElementById("location").value = data.location || "";
         document.getElementById("interests").value = data.interests || "";
+        if (data.gender) {
+          document.getElementById(data.gender === "Male" ? "genderMale" : "genderFemale").checked = true;
+        }
         if (data.profilePicture) {
           profilePreview.src = data.profilePicture;
         }
@@ -85,6 +88,7 @@ profileForm.addEventListener("submit", async (e) => {
   }
 
   const fullName = document.getElementById("fullName").value;
+  const gender = document.querySelector('input[name="gender"]:checked')?.value || "";
   const age = document.getElementById("age").value;
   const bio = document.getElementById("bio").value;
   const location = document.getElementById("location").value;
@@ -94,6 +98,7 @@ profileForm.addEventListener("submit", async (e) => {
     const updateData = {
       email: user.email,
       fullName,
+      gender,
       age: age ? parseInt(age) : null,
       bio,
       location,

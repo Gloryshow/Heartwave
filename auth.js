@@ -87,7 +87,10 @@ if (signupForm) {
         interests: interests,
         profilePicture: null,
         likes: [],
-        createdAt: new Date()
+        createdAt: new Date(),
+        profileHidden: false,
+        showOnlineStatus: true,
+        notificationsEnabled: true
       });
 
       console.log("User created successfully:", user.uid);
