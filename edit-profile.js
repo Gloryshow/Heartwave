@@ -35,6 +35,7 @@ const profileForm = document.getElementById("profileForm");
 const errorBox = document.getElementById("error");
 const successBox = document.getElementById("success");
 const bioCount = document.getElementById("bioCount");
+const profilePreview = document.getElementById("profileImg");
 
 // Character counter for bio - only if element exists
 const bioElement = document.getElementById("bio");
@@ -64,7 +65,7 @@ onAuthStateChanged(auth, async (user) => {
         if (data.gender) {
           document.getElementById(data.gender === "Male" ? "genderMale" : "genderFemale").checked = true;
         }
-        if (data.profilePicture) {
+        if (data.profilePicture && profilePreview) {
           profilePreview.src = data.profilePicture;
         }
         bioCount.innerText = `${(data.bio || "").length}/500`;

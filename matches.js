@@ -63,7 +63,7 @@ async function loadProfiles() {
     console.log("Current user gender:", userGender);
 
     // Determine opposite gender
-    const oppositeGender = userGender === "male" ? "female" : "male";
+    const oppositeGender = userGender === "Male" ? "Female" : "Male";
 
     // Query profiles with opposite gender and not hidden
     const q = query(

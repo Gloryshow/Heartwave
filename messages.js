@@ -52,52 +52,131 @@ const attachBtn = document.getElementById("attachBtn");
 let currentUser = null;
 let currentConversationId = null;
 let messageUnsubscribe = null;
+let conversationListeners = [];
 let notificationsEnabled = false;
+let notificationShown = new Set(); // Track shown notifications
 
 // Request notification permission on page load
 async function requestNotificationPermission() {
   if (!('Notification' in window)) {
     console.log("This browser does not support notifications");
-    return;
+    return false;
   }
 
   if (Notification.permission === 'granted') {
     notificationsEnabled = true;
-  } else if (Notification.permission !== 'denied') {
+    console.log("Notifications already enabled");
+    return true;
+  } else if (Notification.permission === 'denied') {
+    console.log("Notifications denied by user");
+    return false;
+  } else {
     try {
       const permission = await Notification.requestPermission();
       notificationsEnabled = permission === 'granted';
+      console.log("Notification permission:", permission);
+      return notificationsEnabled;
     } catch (err) {
       console.error("Error requesting notification permission:", err);
+      return false;
     }
   }
 }
 
 // Show notification for new message
-async function showMessageNotification(senderName, messagePreview, userId) {
-  if (!notificationsEnabled || !('Notification' in window)) return;
+async function showMessageNotification(senderName, messagePreview, messageId) {
+  if (!notificationsEnabled || !('Notification' in window)) {
+    console.log("Notifications not enabled or not supported");
+    return;
+  }
 
-  // Check if notifications are enabled in Firestore
-  try {
-    const userDoc = await getDoc(doc(db, "users", userId));
-    const userPreferences = userDoc.data();
-    if (!userPreferences?.notificationsEnabled) {
-      return; // User has disabled notifications
-    }
-  } catch (err) {
-    console.error("Error checking notification preference:", err);
+  // Don't show duplicate notifications
+  if (notificationShown.has(messageId)) {
     return;
   }
 
   try {
-    new Notification("💖 HeartWave Message", {
+    const notification = new Notification("💖 HeartWave", {
       body: `${senderName}: ${messagePreview}`,
-      icon: "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext x=%2250%22 y=%2250%22 text-anchor=%22middle%22 dy=%22.3em%22 font-size=%2280%22%3E💖%3C/text%3E%3C/svg%3E",
-      tag: "heartwave-message",
-      requireInteraction: false
+      icon: "/logo.svg",
+      badge: "/logo.svg",
+      tag: `heartwave-msg-${messageId}`,
+      requireInteraction: false,
+      silent: false
     });
+
+    notificationShown.add(messageId);
+
+    notification.onclick = function() {
+      window.focus();
+      notification.close();
+    };
+
+    // Auto close after 5 seconds
+    setTimeout(() => notification.close(), 5000);
+
+    console.log("Notification shown:", senderName);
   } catch (err) {
     console.error("Error showing notification:", err);
+  }
+}
+
+// Monitor all conversations for new messages
+async function monitorConversationsForNotifications() {
+  if (!currentUser) return;
+
+  try {
+    const q = query(
+      collection(db, "conversations"),
+      where("users", "array-contains", currentUser.uid)
+    );
+
+    const querySnapshot = await getDocs(q);
+
+    for (const convDoc of querySnapshot.docs) {
+      const conversationId = convDoc.id;
+      const conv = convDoc.data();
+      const otherUserId = conv.users.find(id => id !== currentUser.uid);
+
+      // Listen to messages in this conversation
+      const messagesQuery = query(
+        collection(db, "conversations", conversationId, "messages"),
+        orderBy("timestamp", "desc")
+      );
+
+      const unsubscribe = onSnapshot(messagesQuery, async (snapshot) => {
+        snapshot.docChanges().forEach(async (change) => {
+          if (change.type === "added") {
+            const msg = change.doc.data();
+            const msgId = change.doc.id;
+
+            // Only notify if:
+            // 1. Message is not from current user
+            // 2. Conversation is not currently open
+            // 3. Message hasn't been shown before
+            if (msg.sender !== currentUser.uid && 
+                conversationId !== currentConversationId &&
+                !notificationShown.has(msgId)) {
+              
+              // Get sender info
+              const senderDoc = await getDoc(doc(db, "users", msg.sender));
+              const senderName = senderDoc.data()?.fullName || "Someone";
+              
+              const messagePreview = msg.text || 
+                                    (msg.type === "image" ? "📷 Image" : 
+                                     msg.type === "audio" ? "🎵 Audio" : 
+                                     msg.type === "video" ? "🎬 Video" : "New message");
+
+              showMessageNotification(senderName, messagePreview, msgId);
+            }
+          }
+        });
+      });
+
+      conversationListeners.push(unsubscribe);
+    }
+  } catch (err) {
+    console.error("Error monitoring conversations:", err);
   }
 }
 
@@ -372,7 +451,13 @@ onAuthStateChanged(auth, async (user) => {
     currentUser = user;
     
     // Request notification permission on page load
-    await requestNotificationPermission();
+    const permissionGranted = await requestNotificationPermission();
+    
+    if (permissionGranted) {
+      console.log("Starting notification monitoring...");
+      // Start monitoring conversations for new messages
+      await monitorConversationsForNotifications();
+    }
     
     await loadConversations();
 
